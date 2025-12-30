@@ -182,6 +182,52 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+/* ===== Plugin: valores nas bolinhas ===== */
+const pluginValoresNosPontos = {
+  id: 'valoresNosPontos',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    ctx.save();
+    ctx.font = '12px Segoe UI';
+    ctx.fillStyle = '#0f172a';
+
+    chart.data.datasets.forEach((dataset, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (!meta || meta.hidden) return;
+
+      const lastIndex = meta.data.length - 1;
+
+      meta.data.forEach((point, index) => {
+        if (index !== lastIndex) return; // 👈 só na última bolinha
+
+        const valor = dataset.data[index];
+        if (valor == null || valor === 0) return;
+
+        const texto = Number(valor).toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL'
+        });
+
+        ctx.fillText(texto, point.x + 8, point.y - 6);
+      });
+    });
+
+    ctx.restore();
+  }
+};
+
+/* 🔥 REGISTRO GLOBAL DO PLUGIN (ESSENCIAL) */
+Chart.register(pluginValoresNosPontos);
+</script>
+
+
+
+
+
+
+  
 <script>
 /* ======= CONFIG ======= */
 const API_BASE='/api/travas_comparacao';
@@ -704,7 +750,7 @@ async function draw(){
 
   note.textContent='';
 
- holder.__chart = new ChartLib(cvs.getContext('2d'), {
+holder.__chart = new ChartLib(cvs.getContext('2d'), {
   type: 'line',
   data: {
     labels: cachedSeries.labels,
@@ -725,10 +771,8 @@ async function draw(){
     scales: {
       y: { beginAtZero: true }
     }
-  },
-  plugins: [pluginValoresNosPontos]
+  }
 });
-} // ✅ FECHA draw()
 
   
 btn.addEventListener('click', async()=>{
