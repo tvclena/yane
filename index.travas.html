@@ -674,35 +674,6 @@ async function buildSeries(emp, from, to){
 
 
 
-const pluginValoresNosPontos = {
-  id: 'valoresNosPontos',
-  afterDatasetsDraw(chart) {
-    const { ctx } = chart;
-    ctx.save();
-    ctx.font = '12px Segoe UI';
-    ctx.fillStyle = '#0f172a';
-
-    chart.data.datasets.forEach((dataset, i) => {
-      const meta = chart.getDatasetMeta(i);
-const lastIndex = meta.data.length - 1;
-meta.data.forEach((point, index) => {
-  if (index !== lastIndex) return;
-        const valor = dataset.data[index];
-        if (!valor) return;
-
-        const texto = valor.toLocaleString('pt-BR', {
-          style: 'currency',
-          currency: 'BRL'
-        });
-
-        ctx.fillText(texto, point.x + 8, point.y - 6);
-      });
-    });
-
-    ctx.restore();
-  }
-};
-
 
   
 /* Chart (linha histórico) */
@@ -750,31 +721,30 @@ async function draw(){
 
   note.textContent='';
 
-holder.__chart = new ChartLib(cvs.getContext('2d'), {
-  type: 'line',
-  data: {
-    labels: cachedSeries.labels,
-    datasets: [{
-      label: chosen,
-      data: cachedSeries.planMap[chosen] || [],
-      tension: .25,
-      pointRadius: 4,
-      pointHoverRadius: 6
-    }]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      legend: { position: 'bottom' },
-      tooltip: { enabled: false }
+  holder.__chart = new ChartLib(cvs.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: cachedSeries.labels,
+      datasets: [{
+        label: chosen,
+        data: cachedSeries.planMap[chosen] || [],
+        tension: .25,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
     },
-    scales: {
-      y: { beginAtZero: true }
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { enabled: false }
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
     }
-  }
-});
-
-  
+  });
+} // ✅ FECHA draw()
 btn.addEventListener('click', async()=>{
   cachedSeries = null;
   await populatePlans();
@@ -785,8 +755,6 @@ planSel.addEventListener('change', draw);
 
 await populatePlans();
 draw();
-
-} // ✅ FECHA mountChart
 
 </script> <!-- ✅ FECHA SCRIPT -->
 
