@@ -638,7 +638,9 @@ const pluginValoresNosPontos = {
 
     chart.data.datasets.forEach((dataset, i) => {
       const meta = chart.getDatasetMeta(i);
-      meta.data.forEach((point, index) => {
+const lastIndex = meta.data.length - 1;
+meta.data.forEach((point, index) => {
+  if (index !== lastIndex) return;
         const valor = dataset.data[index];
         if (!valor) return;
 
