@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <title>Painel de Conciliação</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{
+      --bg:#f6f7fb; --surface:#fff; --card:#fff; --text:#0f172a; --muted:#475569;
+      --line:#e5e7eb; --shadow:0 16px 36px rgba(15,23,42,.08);
+      --blue:#2563eb; --yellow:#f59e0b;
+    }
+    [data-theme="dark"] {
+      --bg:#0f172a; --surface:#1e293b; --card:#1e293b; --text:#f1f5f9; --muted:#94a3b8;
+      --line:#334155; --blue:#3b82f6; --yellow:#fbbf24;
+    }
+    body{margin:0; font-family:sans-serif; background:var(--bg); color:var(--text);}
+    header{position:sticky; top:0; z-index:40; backdrop-filter:saturate(160%) blur(8px);
+      background:var(--surface); border-bottom:1px solid var(--line);}
+    .head{max-width:1200px; margin:0 auto; padding:14px 18px; display:flex; align-items:center; gap:12px}
+    .brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit}
+    .brand img{height:42px}
+    .title{font-weight:800; letter-spacing:.2px; font-size:clamp(18px,1.6vw,22px)}
+    .grow{flex:1}
+    .btn{border:1px solid var(--line); background:var(--surface); color:var(--text);
+      padding:8px 12px; border-radius:12px; font-weight:800; cursor:pointer; display:inline-flex; gap:8px; align-items:center}
+    .btn:hover{box-shadow:var(--shadow); transform:translateY(-1px)}
+    .user{position:relative}
+    .user-btn{display:flex; align-items:center; gap:10px; border:1px solid var(--line);
+      background:var(--surface); padding:6px 8px; border-radius:999px; cursor:pointer}
+    .user-btn img{width:34px; height:34px; border-radius:50%; object-fit:cover; background:#ddd}
+    .user-menu{position:absolute; right:0; top:110%; background:var(--surface); border:1px solid var(--line);
+      border-radius:12px; min-width:200px; padding:6px; box-shadow:var(--shadow); display:none}
+    .user.open .user-menu{display:block}
+    .user-menu a,.user-menu button{display:flex; width:100%; padding:10px 12px; border-radius:10px;
+      border:none; background:transparent; color:var(--text); text-align:left; cursor:pointer; font-weight:600}
+    .user-menu a:hover,.user-menu button:hover{background:rgba(2,6,23,.06)}
+    .container{max-width:1200px; margin:0 auto; padding:20px}
+    .filters{display:grid; grid-template-columns:1fr 180px; gap:12px; margin-bottom:20px}
+    @media(max-width:700px){.filters{grid-template-columns:1fr;}}
+    .field label{display:block; margin:0 0 4px; font-weight:700; color:var(--muted)}
+    .field input,.field select{width:100%; padding:10px; border:1px solid var(--line); border-radius:10px;}
+    .card{background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); padding:16px; margin-bottom:18px}
+    .card h3{margin:0 0 12px}
+    .flex{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:24px;}
+    .circle-wrap{display:flex; flex-direction:column; align-items:center; gap:10px}
+    canvas{width:120px!important; height:120px!important}
+    button{padding:8px 14px; border:1px solid var(--line); border-radius:10px; background:var(--surface); font-weight:700; cursor:pointer}
+    table{width:100%; border-collapse:collapse; font-size:.95rem}
+    th,td{padding:10px; border-bottom:1px solid var(--line); text-align:left}
+    td:last-child,th:last-child{text-align:right}
+    .loading{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:60}
+    .loading.show{display:flex}
+    .spinner{width:74px; height:74px; border-radius:50%; border:6px solid rgba(255,255,255,.25); border-top-color:#fff; animation:spin 1s linear infinite}
+    .loading p{color:#fff; font-weight:800; margin-top:12px; text-shadow:0 2px 6px rgba(0,0,0,.3)}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="head">
+    <a class="brand" href="#">
+      <img src="https://github.com/ClenaStore/painel-principal/blob/main/img/GRUPO%20DV%20(1).png?raw=true" alt="Logo">
+      <span class="title">Painel de Conciliação</span>
+    </a>
+    <div class="grow"></div>
+    <button id="btnTema" class="btn">🌓 Tema</button>
+    <div class="user" id="userMenu">
+      <button class="user-btn" type="button">
+        <img src="https://github.com/ClenaStore/grupodv/blob/main/paste/Imagem%20do%20WhatsApp%20de%202025-09-08%20%C3%A0(s)%2011.54.12_884bebc9.jpg?raw=true" alt="">
+        <strong style="font-size:13px">Leonardo</strong>
+      </button>
+      <div class="user-menu">
+        <a href="#">👤 Meu Perfil</a>
+        <button onclick="alert('Logout')">🚪 Sair</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div id="loading" class="loading" aria-hidden="true">
+  <div style="display:flex; flex-direction:column; align-items:center;">
+    <div class="spinner"></div>
+    <p>Carregando dados...</p>
+  </div>
+</div>
+
+<div class="container">
+  <div class="filters">
+    <div class="field">
+      <label>Empresa</label>
+      <select id="fEmpresa"></select>
+    </div>
+    <div class="field">
+      <label>Data</label>
+      <input type="date" id="fData">
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Conciliação</h3>
+    <div class="flex" id="areaGraficos"></div>
+  </div>
+
+  <div class="card">
+    <h3>Valores Pendentes</h3>
+    <table>
+      <thead><tr><th>Data</th><th>Empresa</th><th>Tipo</th><th>Valor</th></tr></thead>
+      <tbody id="tblPend"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const API_URL="https://script.google.com/macros/s/AKfycbxVmPiaFQptAWVN1GKNiy_LKW-QyovxVNsBMLV-NrEDVDchxLaCCAavqlQoQb4-IWmk/exec";
+let charts=[];
+const cores=["#2563eb","#f59e0b","#16a34a","#ef4444","#8b5cf6","#06b6d4"];
+
+/* Doughnut */
+function criaDoughnut(canvas, valor, cor, label=""){
+  return new Chart(canvas,{
+    type:'doughnut',
+    data:{datasets:[{data:[valor,100-valor], backgroundColor:[cor,"#e5e7eb"], cutout:"70%"}]},
+    options:{plugins:{legend:{display:false},tooltip:{enabled:false}}},
+    plugins:[{id:"text",beforeDraw(c){
+      const {ctx,width}=c; ctx.save();
+      ctx.font="bold 16px sans-serif"; ctx.fillStyle=cor;
+      ctx.textAlign="center"; ctx.textBaseline="middle"; 
+      ctx.fillText(valor.toFixed(1)+"%",width/2,c.chartArea.height/2);
+      if(label){ctx.font="12px sans-serif"; ctx.fillStyle="#555"; ctx.fillText(label,width/2,c.chartArea.height/2+20);}
+    }}]
+  });
+}
+
+/* Carregar */
+async function carregar(){
+  document.getElementById('loading').classList.add("show");
+  const res=await fetch(API_URL);
+  const js=await res.json();
+
+  const empresas=[...new Set(js.map(r=>r.empresa))];
+  const sel=document.getElementById("fEmpresa");
+  sel.innerHTML=`<option value="">Todas</option>`+empresas.map(e=>`<option>${e}</option>`).join("");
+
+  function aplicar(){
+    charts.forEach(c=>c.destroy());
+    charts=[];
+    const emp=sel.value;
+    const area=document.getElementById("areaGraficos");
+    area.innerHTML="";
+
+    // 🔑 filtro só por empresa (ignora campo data vazio)
+    let pend=js.filter(r=>(!emp||r.empresa===emp));
+
+    if(emp){
+      let empresa=pend[0];
+      if(!empresa) return;
+      let wrap1=document.createElement("div"); wrap1.className="circle-wrap";
+      let c1=document.createElement("canvas"); wrap1.appendChild(c1);
+      wrap1.innerHTML+=`<button>Conciliar cartões</button>`;
+      let wrap2=document.createElement("div"); wrap2.className="circle-wrap";
+      let c2=document.createElement("canvas"); wrap2.appendChild(c2);
+      wrap2.innerHTML+=`<button>Conciliar bancos</button>`;
+      area.appendChild(wrap1); area.appendChild(wrap2);
+      charts.push(criaDoughnut(c1,empresa.percentual,cores[0],"Cartões"));
+      charts.push(criaDoughnut(c2,empresa.percentual,cores[1],"Bancos"));
+    }else{
+      pend.forEach((r,i)=>{
+        let wrap=document.createElement("div"); wrap.className="circle-wrap";
+        let c=document.createElement("canvas"); wrap.appendChild(c);
+        wrap.innerHTML+=`<strong>${r.empresa}</strong>`;
+        area.appendChild(wrap);
+        charts.push(criaDoughnut(c,r.percentual,cores[i%cores.length],r.empresa));
+      });
+    }
+
+    // Tabela pendentes
+    const tbody=document.getElementById("tblPend");
+    tbody.innerHTML=pend.filter(r=>r.pendente>0)
+      .map(r=>`<tr>
+        <td>${r.data||"-"}</td>
+        <td>${r.empresa}</td>
+        <td>Pendente</td>
+        <td>R$ ${Number(r.pendente).toLocaleString("pt-BR",{minimumFractionDigits:2})}</td>
+      </tr>`).join("");
+  }
+
+  aplicar();
+  sel.onchange=aplicar;
+  document.getElementById('loading').classList.remove("show");
+}
+carregar();
+</script>
+</body>
+</html>

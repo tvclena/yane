@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cancelamentos - Grupo DV</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root{
+      /* Tema escuro (padrão metas) */
+      --bg:#0b1020; --surface:#10172a; --card:#0f172a; --text:#e5e7eb; --muted:#94a3b8;
+      --line:rgba(148,163,184,.25); --icon-bg:rgba(255,255,255,.06);
+      --shadow:0 20px 60px rgba(2,6,23,.35); --brand:#60a5fa; --brand2:#22d3ee;
+      --ok:#16a34a; --bad:#dc2626;
+    }
+    [data-theme="light"]{
+      --bg:#f6f7fb; --surface:#fff; --card:#fff; --text:#0f172a; --muted:#475569;
+      --line:#e5e7eb; --icon-bg:rgba(2,6,23,.06); --shadow:0 16px 36px rgba(15,23,42,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg); color:var(--text);
+    }
+
+    /* Header unificado */
+    header{position:sticky; top:0; z-index:40; backdrop-filter:saturate(160%) blur(8px);
+      background:color-mix(in srgb, var(--surface) 80%, transparent); border-bottom:1px solid var(--line);}
+    .head{max-width:1200px; margin:0 auto; padding:14px 18px; display:flex; align-items:center; gap:12px}
+    .brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit}
+    .brand img{height:42px}
+    .title{font-weight:800; letter-spacing:.2px; font-size:clamp(18px,1.6vw,22px)}
+    .grow{flex:1}
+    .btn{border:1px solid var(--line); background:var(--surface); color:var(--text);
+      padding:10px 12px; border-radius:12px; font-weight:800; cursor:pointer; display:inline-flex; gap:8px; align-items:center}
+    .btn:hover{box-shadow:var(--shadow); transform:translateY(-1px)}
+    .only-desktop{display:inline-flex}
+    @media (max-width:900px){.only-desktop{display:none!important}}
+
+    .user{position:relative}
+    .user-btn{display:flex; align-items:center; gap:10px; border:1px solid var(--line);
+      background:var(--surface); padding:6px 8px; border-radius:999px; cursor:pointer}
+    .user-btn img{width:34px; height:34px; border-radius:50%; object-fit:cover; background:var(--icon-bg)}
+    .user-menu{position:absolute; right:0; top:110%; background:var(--surface); border:1px solid var(--line);
+      border-radius:12px; min-width:200px; padding:6px; box-shadow:var(--shadow); display:none}
+    .user.open .user-menu{display:block}
+    .user-menu a,.user-menu button{display:flex; width:100%; padding:10px 12px; border-radius:10px;
+      border:none; background:transparent; color:var(--text); text-align:left; cursor:pointer; font-weight:600}
+    .user-menu a:hover,.user-menu button:hover{background:var(--icon-bg)}
+
+    /* Página */
+    .container{max-width:1200px; margin:0 auto; padding:20px 18px}
+
+    /* Filtros (grid igual padrão) */
+    .filters{display:grid; grid-template-columns: 220px 220px 220px 1fr 200px; gap:12px; align-items:end}
+    @media (max-width:1100px){ .filters{grid-template-columns: 1fr 1fr} }
+    @media (max-width:600px){ .filters{grid-template-columns: 1fr} }
+    .field label{display:block; margin:0 0 6px; color:var(--muted); font-weight:800; font-size:.95rem}
+    .picker-btn, select, input[type="date"], input[type="text"]{
+      width:100%; border:1px solid var(--line); background:var(--surface); color:var(--text);
+      border-radius:12px; padding:12px 14px; font-weight:700;
+    }
+    .action{width:100%}
+
+    /* Cards/grupos */
+    .grupo-empresa{
+      background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:var(--shadow);
+      margin-bottom:16px;
+    }
+    .grupo-empresa h2{margin:0 0 10px; font-size:1.02rem; color:var(--text)}
+    .item-cancelamento{border-top:1px dashed var(--line); padding:10px 0}
+    .item-cancelamento:first-child{border-top:none}
+    .item-cancelamento p{margin:4px 0; color:var(--muted)}
+
+    /* Total / resumo */
+    .total-cancelado{
+      background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:var(--shadow);
+      font-weight:800; margin-top:8px; margin-bottom:16px;
+    }
+    .dados-analisados{ text-align:center; color:var(--muted); font-size:.95em; margin-top:12px }
+
+    /* Gráfico */
+    .chart-box{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin:16px 0}
+    #graficoCancelamentos{width:100%!important; height:320px!important}
+
+    /* Loading overlay */
+    .loading{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:60}
+    .loading.show{display:flex}
+    .spinner{width:74px; height:74px; border-radius:50%; border:6px solid rgba(255,255,255,.25);
+      border-top-color:#fff; animation:spin 1s linear infinite}
+    .loading p{color:#fff; font-weight:800; margin-top:12px; text-shadow:0 2px 6px rgba(0,0,0,.3)}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Botão WhatsApp com estilo de ação */
+    .btn-whats{ background:#25d366; color:#fff; border-color:#21b75a }
+
+    /* Botão flutuante DV + chat */
+    #botaoChatFlutuante{
+      position:fixed; bottom:20px; right:20px; width:46px; height:46px;
+      background:linear-gradient(140deg,#0B2240, color-mix(in srgb,#0B2240 70%, #22d3ee));
+      color:#fff; border:none; border-radius:50%; display:flex; align-items:center; justify-content:center;
+      cursor:pointer; z-index:55; box-shadow:0 10px 28px rgba(2,6,23,.35); font-weight:900; letter-spacing:.3px
+    }
+    #botaoChatFlutuante:hover{ transform:translateY(-1px); box-shadow:0 14px 34px rgba(2,6,23,.45) }
+
+  </style>
+
+  <!-- Proteção por senha + tema sincronizado + fetch com x-api-key -->
+  <script>
+    (function(){
+      const KEY = 'dv_pwd';
+      const t = localStorage.getItem('dv_theme'); if(t) document.documentElement.setAttribute('data-theme', t);
+
+      window.__toggleTheme = function(){
+        const cur = document.documentElement.getAttribute('data-theme')||'light';
+        const next = (cur==='light')?'dark':'light';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('dv_theme', next);
+      };
+
+      async function ensurePwd(){
+        let pwd = localStorage.getItem(KEY)||'';
+        while(!pwd){
+          pwd = prompt('Digite a senha de acesso:')||'';
+          if(!pwd) continue;
+          try{
+            const r = await fetch('/api/ping', {headers:{'x-api-key':pwd}});
+            if(r.ok){ localStorage.setItem(KEY, pwd); break; }
+            alert('Senha incorreta.'); pwd='';
+          }catch{
+            localStorage.setItem(KEY, pwd); break;
+          }
+        }
+      }
+
+      const _f = window.fetch.bind(window);
+      window.fetch = (input, init={})=>{
+        const url = (typeof input==='string')?input:(input&&input.url)||'';
+        const headers = new Headers(init.headers||((typeof input!=='string'&&input.headers)||{}));
+        const pwd = localStorage.getItem(KEY)||'';
+        if(url.startsWith('/api/') && pwd) headers.set('x-api-key', pwd);
+        return _f(input, Object.assign({}, init, {headers}));
+      };
+
+      if(!localStorage.getItem(KEY)) ensurePwd();
+      window.handleLogout = ()=>{ localStorage.removeItem(KEY); location.reload(); }
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="head">
+      <a class="brand" href="index.html" aria-label="Início">
+        <img src="https://github.com/ClenaStore/painel-principal/blob/main/img/GRUPO%20DV%20(1).png?raw=true" alt="Logo">
+        <span class="title">Cancelamentos</span>
+      </a>
+      <div class="grow"></div>
+      <a class="btn only-desktop" href="index.relatorios.html">📄 Relatórios</a>
+      <button id="themeToggle" class="btn">🌓 Tema</button>
+      <div class="user" id="userMenu">
+        <button class="user-btn" type="button">
+          <img src="https://github.com/ClenaStore/grupodv/blob/main/paste/Imagem%20do%20WhatsApp%20de%202025-09-08%20%C3%A0(s)%2011.54.12_884bebc9.jpg?raw=true" alt="">
+          <strong style="font-size:13px">Leonardo</strong>
+        </button>
+        <div class="user-menu">
+          <a href="perfil.html">👤 Meu Perfil</a>
+          <button onclick="handleLogout()">🚪 Sair</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Loading overlay -->
+  <div id="loading" class="loading" aria-hidden="true">
+    <div style="display:flex; flex-direction:column; align-items:center;">
+      <div class="spinner"></div>
+      <p>Carregando dados...</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Filtros -->
+    <div class="filters">
+      <div class="field">
+        <label>Data inicial</label>
+        <input type="date" id="dataInicio" />
+      </div>
+      <div class="field">
+        <label>Data final</label>
+        <input type="date" id="dataFim" />
+      </div>
+      <div class="field">
+        <label>Empresa</label>
+        <select id="filtroEmpresa"></select>
+      </div>
+      <div class="field">
+        <label>Busca</label>
+        <input type="text" id="filtroBusca" placeholder="Buscar item..." />
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button id="btnFiltrar" class="btn action btn-whats" type="button" style="background:#25d366; color:#fff; border-color:#21b75a">📤 WhatsApp</button>
+      </div>
+    </div>
+
+    <!-- Total -->
+    <div class="total-cancelado">
+      📊 Total Cancelado: <span id="totalCancelado"><strong>R$ 0,00</strong></span>
+    </div>
+
+    <div id="infoPeriodo" class="dados-analisados"></div>
+
+    <!-- Gráfico -->
+    <div id="graficoContainer" class="chart-box" style="display:none">
+      <h3 style="margin:0 0 8px">📈 Evolução dos Cancelamentos</h3>
+      <canvas id="graficoCancelamentos"></canvas>
+    </div>
+
+    <!-- Lista -->
+    <div id="listaCancelamentos"></div>
+    <div class="dados-analisados" id="resumoDados"></div>
+  </div>
+
+  <!-- Botão Neon Flutuante -->
+  <button id="botaoChatFlutuante" onclick="abrirAssistente()">DV</button>
+
+  <!-- Assistente Virtual -->
+  <div id="chatAssistente" style="position:fixed;bottom:20px;right:20px;width:300px;max-height:420px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;font-size:13px;display:none;flex-direction:column;z-index:56">
+    <div style="background:#25D366;color:white;padding:10px;font-weight:bold;text-align:center;display:flex;justify-content:space-between;align-items:center">
+      Assistente do GRUPO DV
+      <button onclick="fecharAssistente()" style="background:none;border:none;color:white;font-size:16px;cursor:pointer">✖</button>
+    </div>
+    <div id="chatMensagens" style="flex:1;padding:10px;overflow-y:auto"></div>
+    <div style="display:flex;border-top:1px solid var(--line)">
+      <input id="chatInput" type="text" placeholder="Pergunte algo..." style="flex:1;border:none;padding:10px;font-size:13px;background:transparent;color:var(--text)" onkeypress="if(event.key==='Enter')responderPergunta()">
+      <button onclick="responderPergunta()" class="btn" style="border:none;background:#25D366;color:#fff">➤</button>
+    </div>
+  </div>
+
+<script>
+/* ---------- Tema & usuário ---------- */
+document.getElementById('themeToggle').addEventListener('click', ()=>window.__toggleTheme && window.__toggleTheme());
+const user = document.getElementById('userMenu');
+user.querySelector('.user-btn').addEventListener('click', ()=>user.classList.toggle('open'));
+window.addEventListener('click', e=>{ if(!user.contains(e.target)) user.classList.remove('open'); });
+
+/* ---------- Helpers ---------- */
+const URL_SCRIPT = '/api/cancelamentos';
+let cancelamentos = [];
+let chartCancelamentos = null;
+const $$ = sel => document.querySelector(sel);
+const showLoading = v => $$('#loading').classList.toggle('show', !!v);
+const BRL = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const fmtDataBR = iso => { if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; };
+
+function preencherDataPadrao(){
+  const hoje = new Date(); const ontem = new Date(hoje); ontem.setDate(hoje.getDate()-1);
+  const iso = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().split('T')[0];
+  $$('#dataInicio').value = iso(ontem);
+  $$('#dataFim').value    = iso(ontem);
+}
+
+/* ---------- Dados ---------- */
+async function carregarDados(){
+  showLoading(true);
+  try{
+    const res = await fetch(URL_SCRIPT);
+    cancelamentos = await res.json();
+    preencherFiltros();
+    aplicarFiltros();
+  }catch(e){
+    console.error(e);
+    $$('#listaCancelamentos').innerHTML = `<p style="text-align:center; color:var(--muted)">Erro ao carregar dados.</p>`;
+  }finally{
+    showLoading(false);
+  }
+}
+
+function preencherFiltros(){
+  const empresas = [...new Set(cancelamentos.map(c => c.empresa))].sort();
+  const sel = $$('#filtroEmpresa');
+  sel.innerHTML = `<option value="">Todas as Empresas</option>` + empresas.map(e=>`<option value="${e}">${e}</option>`).join('');
+}
+
+/* ---------- Filtros & Render ---------- */
+function aplicarFiltros(){
+  const emp = $$('#filtroEmpresa').value;
+  const busca = ($$('#filtroBusca').value||'').toLowerCase();
+  const di = $$('#dataInicio').value;
+  const df = $$('#dataFim').value;
+
+  const grupos = {};
+  let totalGeral = 0;
+
+  cancelamentos.forEach(c=>{
+    if(emp && c.empresa!==emp) return;
+    if(busca && !String(c.item).toLowerCase().includes(busca)) return;
+    if(di && c.data < di) return;
+    if(df && c.data > df) return;
+    (grupos[c.empresa]||(grupos[c.empresa]=[])).push(c);
+  });
+
+  const lista = $$('#listaCancelamentos'); lista.innerHTML = '';
+  Object.keys(grupos).sort().forEach(empresa=>{
+    const grupo = grupos[empresa].sort((a,b)=> a.data.localeCompare(b.data));
+    let subtotal = 0;
+
+    const card = document.createElement('div');
+    card.className = 'grupo-empresa';
+
+    grupo.forEach(c=> subtotal += (Number(c.valor)||0));
+    totalGeral += subtotal;
+
+    const titulo = document.createElement('h2');
+    const primeiraData = grupo[0]?.data || '';
+    titulo.innerHTML = `📅 ${fmtDataBR(primeiraData)} • 🏢 ${empresa} — <strong>Subtotal: ${BRL(subtotal)}</strong>`;
+    card.appendChild(titulo);
+
+    grupo.forEach(c=>{
+      const div = document.createElement('div');
+      div.className = 'item-cancelamento';
+      const [nomeItem, valorInfo] = String(c.item||'').split(' – ');
+      div.innerHTML = `
+        <p>${nomeItem||c.item||'-'}</p>
+        <p>💸 ${valorInfo||BRL(c.valor||0)}</p>
+      `;
+      card.appendChild(div);
+    });
+
+    lista.appendChild(card);
+
+    if(emp === empresa) desenharGrafico(grupo);
+  });
+
+  $$('#totalCancelado').innerHTML = `<strong>${BRL(totalGeral)}</strong>`;
+
+  const periodoTxt = (di&&df) ? `${fmtDataBR(di)} → ${fmtDataBR(df)}` : 'Período não informado';
+  $$('#infoPeriodo').textContent = `Dados analisados • ${periodoTxt}`;
+
+  $$('#graficoContainer').style.display = emp ? 'block' : 'none';
+}
+
+function desenharGrafico(lista){
+  const porData = {};
+  lista.forEach(c=>{ porData[c.data] = (porData[c.data]||0) + (Number(c.valor)||0); });
+  const labels = Object.keys(porData).sort();
+  const valores = labels.map(d=> porData[d]);
+
+  const ctx = $$('#graficoCancelamentos').getContext('2d');
+  if(chartCancelamentos) chartCancelamentos.destroy();
+
+  chartCancelamentos = new Chart(ctx,{
+    type:'line',
+    data:{
+      labels: labels.map(fmtDataBR),
+      datasets:[{
+        label:'Cancelamentos por Dia',
+        data: valores,
+        borderColor:'#e74c3c',
+        backgroundColor:'rgba(231,76,60,.12)',
+        tension:.25,
+        pointRadius:4, pointHoverRadius:7, pointHitRadius:28,
+        fill:true
+      }]
+    },
+    options:{
+      responsive:true,
+      interaction:{mode:'nearest', intersect:true},
+      plugins:{
+        legend:{display:false},
+        tooltip:{intersect:true, callbacks:{label:c=> BRL(c.parsed.y) }}
+      },
+      scales:{
+        y:{beginAtZero:true, ticks:{ callback:v=> BRL(v).replace('R$ ','R$ ') }}
+      }
+    }
+  });
+}
+
+/* ---------- WhatsApp ---------- */
+function enviarWhatsapp(){
+  const di = $$('#dataInicio').value, df = $$('#dataFim').value;
+  const periodo = (di&&df)? `${fmtDataBR(di)} - ${fmtDataBR(df)}` : 'Período não informado';
+  const blocos = document.querySelectorAll('.grupo-empresa'); if(!blocos.length) return alert('Nenhum dado para enviar.');
+  let msg = `📆 Resumo de cancelamentos ${periodo}\n\n`;
+  blocos.forEach(b=>{
+    const h2 = b.querySelector('h2')?.innerText || '';
+    const itens=[...b.querySelectorAll('.item-cancelamento')].map(div=>div.innerText.replace(/\n/g,' • ')).join('\n');
+    msg += `*${h2}*\n${itens}\n\n`;
+  });
+  const numero='5577999761436';
+  window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg.trim())}`,'_blank');
+}
+
+/* ---------- Chat assistente ---------- */
+function adicionarMensagem(remetente, mensagem){
+  const chat = $$('#chatMensagens');
+  const div = document.createElement('div');
+  div.style.marginBottom='8px';
+  div.innerHTML = `<strong>${remetente}:</strong> ${mensagem}`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function abrirAssistente(){
+  $$('#chatAssistente').style.display='flex';
+  $$('#botaoChatFlutuante').style.display='none';
+  const chat = $$('#chatMensagens');
+  if(!$('#botoesSugestoes')){
+    const div = document.createElement('div'); div.id='botoesSugestoes'; div.style.marginBottom='10px';
+    ['Quanto foi cancelado hoje?','Cancelados do Mercatto no dia 01/08/2025','Quais itens foram cancelados em 25/07?','Total cancelado com rodízio','Últimos cancelamentos']
+      .forEach(txt=>{
+        const b=document.createElement('button');
+        b.textContent=txt; Object.assign(b.style,{margin:'2px',padding:'6px 10px',borderRadius:'6px',border:`1px solid var(--line)`,cursor:'pointer',fontSize:'12px',background:'transparent',color:'var(--text)'});
+        b.onclick=()=>responderPergunta(txt.toLowerCase());
+        div.appendChild(b);
+      });
+    chat.appendChild(div);
+  }
+}
+function fecharAssistente(){ $$('#chatAssistente').style.display='none'; $$('#botaoChatFlutuante').style.display='flex'; }
+function $(sel){ return document.querySelector(sel); }
+
+function responderPergunta(perguntaManual=null){
+  const input = $$('#chatInput');
+  const pergunta = (perguntaManual||input.value||'').trim().toLowerCase();
+  if(!pergunta) return;
+  adicionarMensagem('Você', pergunta);
+  input.value='';
+
+  const hoje = new Date();
+  const hojeStr = new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate()).toISOString().slice(0,10);
+  const mesAtual = hojeStr.slice(0,7);
+  const mesAnt = new Date(hoje); mesAnt.setMonth(mesAnt.getMonth()-1); const mesAntStr = new Date(mesAnt.getFullYear(), mesAnt.getMonth(), 1).toISOString().slice(0,7);
+
+  const parseData = s=>{
+    const m = s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if(!m) return null; let [_,d,mm,y]=m; if(y.length===2) y='20'+y;
+    return `${y}-${mm.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  };
+  const dataEncontrada = parseData(pergunta);
+  const empresaMatch = cancelamentos.find(c => pergunta.includes(String(c.empresa).toLowerCase()));
+  const empresaSelecionada = empresaMatch ? empresaMatch.empresa : null;
+  const palavras = ['rodízio','rodizio','pizza','bebida','hamburguer','combo','entrada'].filter(p=>pergunta.includes(p));
+
+  const filtrados = cancelamentos.filter(c=>{
+    if(dataEncontrada && c.data!==dataEncontrada) return false;
+    if(empresaSelecionada && c.empresa!==empresaSelecionada) return false;
+    if(palavras.length && !palavras.some(p=> String(c.item).toLowerCase().includes(p))) return false;
+    return true;
+  });
+
+  let resposta = 'Desculpe, não entendi. Estou sendo configurado.';
+
+  if(pergunta.includes('últimos') || pergunta.includes('recentes')){
+    const ult = cancelamentos.slice(-5).reverse().map(c=>`• ${fmtDataBR(c.data)} - ${c.empresa}: ${c.item} (${BRL(c.valor)})`);
+    resposta = '🕒 Últimos 5 cancelamentos:\n' + ult.join('\n');
+  }else if(filtrados.length && pergunta.includes('cancelado')){
+    const tot = filtrados.reduce((a,c)=>a+(Number(c.valor)||0),0);
+    resposta = `Total cancelado${empresaSelecionada?` pela empresa ${empresaSelecionada}`:''}${dataEncontrada?` em ${fmtDataBR(dataEncontrada)}`:''}${palavras.length?` com "${palavras[0]}"`:''}: ${BRL(tot)}.`;
+  }else if(filtrados.length && (pergunta.includes('item') || pergunta.includes('quais'))){
+    const itens = filtrados.map(c=>`• ${c.item} (${BRL(c.valor)})`);
+    resposta = `Itens cancelados${empresaSelecionada?` pela empresa ${empresaSelecionada}`:''}${dataEncontrada?` em ${fmtDataBR(dataEncontrada)}`:''}:\n${itens.join('\n')}`;
+  }else if(/cancelado.*mes.*passado/.test(pergunta)){
+    const tot = cancelamentos.filter(c=> String(c.data).startsWith(mesAntStr)).reduce((a,c)=>a+(Number(c.valor)||0),0);
+    resposta = `No mês passado foram cancelados ${BRL(tot)}.`;
+  }else if(/cancelado.*este.*mes/.test(pergunta)){
+    const tot = cancelamentos.filter(c=> String(c.data).startsWith(mesAtual)).reduce((a,c)=>a+(Number(c.valor)||0),0);
+    resposta = `Neste mês foram cancelados ${BRL(tot)}.`;
+  }else if(/cancelamento.*hoje/.test(pergunta)){
+    const tot = cancelamentos.filter(c=> c.data===hojeStr).reduce((a,c)=>a+(Number(c.valor)||0),0);
+    resposta = `Hoje foram cancelados ${BRL(tot)}.`;
+  }
+
+  adicionarMensagem('Assistente', resposta);
+}
+
+/* ---------- Listeners ---------- */
+['change','input'].forEach(evt=>{
+  $$('#filtroEmpresa').addEventListener('change', aplicarFiltros);
+  $$('#dataInicio').addEventListener('change', aplicarFiltros);
+  $$('#dataFim').addEventListener('change', aplicarFiltros);
+  $$('#filtroBusca').addEventListener('input', aplicarFiltros);
+});
+$('#btnFiltrar').addEventListener('click', enviarWhatsapp);
+
+/* ---------- Init ---------- */
+(function init(){
+  preencherDataPadrao();
+  carregarDados();
+})();
+</script>
+</body>
+</html>
