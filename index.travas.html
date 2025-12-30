@@ -733,16 +733,20 @@ async function draw(){
         pointHoverRadius: 6
       }]
     },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'bottom' },
-        tooltip: { enabled: false }
-      },
-      scales: {
-        y: { beginAtZero: true }
-      }
-    }
+   options: {
+  responsive: true,
+  plugins: {
+    legend: { position: 'bottom' },
+    tooltip: { enabled: false },
+
+    // 🔥 ATIVA O PLUGIN AQUI
+    valoresNosPontos: {}
+  },
+  scales: {
+    y: { beginAtZero: true }
+  }
+}
+
   });
 } // ✅ FECHA draw()
 btn.addEventListener('click', async()=>{
