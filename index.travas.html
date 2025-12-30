@@ -185,6 +185,7 @@
 
 <script>
 /* ===== Plugin: valores nas bolinhas ===== */
+/* ===== Plugin: valor em TODAS as bolinhas ===== */
 const pluginValoresNosPontos = {
   id: 'valoresNosPontos',
   afterDatasetsDraw(chart) {
@@ -192,6 +193,7 @@ const pluginValoresNosPontos = {
     ctx.save();
     ctx.font = '11px Segoe UI';
     ctx.fillStyle = '#0f172a';
+    ctx.textAlign = 'center';
 
     chart.data.datasets.forEach((dataset, i) => {
       const meta = chart.getDatasetMeta(i);
@@ -207,7 +209,8 @@ const pluginValoresNosPontos = {
           maximumFractionDigits: 0
         });
 
-        ctx.fillText(texto, point.x + 6, point.y - 8);
+        // valor acima da bolinha
+        ctx.fillText(texto, point.x, point.y - 10);
       });
     });
 
