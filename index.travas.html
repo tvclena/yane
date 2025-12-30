@@ -626,6 +626,37 @@ async function buildSeries(emp, from, to){
   return {labels:months, planMap, plans:[...plansSet].sort()};
 }
 
+
+
+const pluginValoresNosPontos = {
+  id: 'valoresNosPontos',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    ctx.save();
+    ctx.font = '12px Segoe UI';
+    ctx.fillStyle = '#0f172a';
+
+    chart.data.datasets.forEach((dataset, i) => {
+      const meta = chart.getDatasetMeta(i);
+      meta.data.forEach((point, index) => {
+        const valor = dataset.data[index];
+        if (!valor) return;
+
+        const texto = valor.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL'
+        });
+
+        ctx.fillText(texto, point.x + 8, point.y - 6);
+      });
+    });
+
+    ctx.restore();
+  }
+};
+
+
+  
 /* Chart (linha histórico) */
 async function mountChart(emp, holder, runIdAtMount){
   if(!ChartLib){
@@ -652,28 +683,64 @@ async function mountChart(emp, holder, runIdAtMount){
     topList.innerHTML=arr.map(i=>`<li>${i.nome} — <b>${moeda(i.valor)}</b></li>`).join('') || '<li>Nada a mostrar.</li>';
   }
 
-  async function draw(){
-    if(!cachedSeries){ await populatePlans(); if (runIdAtMount !== currentRun) return; }
-    const chosen=planSel.value||'';
-    if(holder.__chart){ holder.__chart.destroy(); holder.__chart=null; }
-    if(!chosen){
-      note.textContent='Escolha um plano acima para ver o gráfico.';
-      return;
-    }
-    note.textContent='';
-    const ds=[{label:chosen,data:cachedSeries.planMap[chosen]||new Array(cachedSeries.labels.length).fill(0),tension:.25}];
-    holder.__chart=new ChartLib(cvs.getContext('2d'),{
-      type:'line',
-      data:{labels:cachedSeries.labels,datasets:ds},
-      options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}
-    });
+async function draw(){
+  if(!cachedSeries){
+    await populatePlans();
+    if (runIdAtMount !== currentRun) return;
   }
 
-  btn.addEventListener('click', async()=>{ cachedSeries=null; await populatePlans(); await draw(); });
-  planSel.addEventListener('change', draw);
+  const chosen = planSel.value || '';
+  if(holder.__chart){
+    holder.__chart.destroy();
+    holder.__chart = null;
+  }
 
+  if(!chosen){
+    note.textContent='Escolha um plano acima para ver o gráfico.';
+    return;
+  }
+
+  note.textContent='';
+
+ holder.__chart = new ChartLib(cvs.getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: cachedSeries.labels,
+    datasets: [{
+      label: chosen,
+      data: cachedSeries.planMap[chosen] || [],
+      tension: .25,
+      pointRadius: 4,
+      pointHoverRadius: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: { enabled: false }
+    },
+    scales: {
+      y: { beginAtZero: true }
+    }
+  },
+  plugins: [pluginValoresNosPontos]
+});
+} // ✅ FECHA draw()
+
+  
+btn.addEventListener('click', async()=>{
+  cachedSeries = null;
   await populatePlans();
-}
+  draw();
+});
+
+planSel.addEventListener('change', draw);
+
+await populatePlans();
+draw();
+
+
 </script>
 </body>
 </html>
