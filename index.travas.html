@@ -190,27 +190,24 @@ const pluginValoresNosPontos = {
   afterDatasetsDraw(chart) {
     const { ctx } = chart;
     ctx.save();
-    ctx.font = '12px Segoe UI';
+    ctx.font = '11px Segoe UI';
     ctx.fillStyle = '#0f172a';
 
     chart.data.datasets.forEach((dataset, i) => {
       const meta = chart.getDatasetMeta(i);
       if (!meta || meta.hidden) return;
 
-      const lastIndex = meta.data.length - 1;
-
       meta.data.forEach((point, index) => {
-        if (index !== lastIndex) return; // 👈 só na última bolinha
-
         const valor = dataset.data[index];
         if (valor == null || valor === 0) return;
 
         const texto = Number(valor).toLocaleString('pt-BR', {
           style: 'currency',
-          currency: 'BRL'
+          currency: 'BRL',
+          maximumFractionDigits: 0
         });
 
-        ctx.fillText(texto, point.x + 8, point.y - 6);
+        ctx.fillText(texto, point.x + 6, point.y - 8);
       });
     });
 
@@ -218,8 +215,8 @@ const pluginValoresNosPontos = {
   }
 };
 
-/* 🔥 REGISTRO GLOBAL DO PLUGIN (ESSENCIAL) */
 Chart.register(pluginValoresNosPontos);
+
 </script>
 
 
