@@ -617,7 +617,7 @@ async function run(){
     if(btn) btn.addEventListener('click',()=>openModal(`Detalhamento Fornecedores — ${emp}`, planos));
   });
 
-  if(empSel!=='TODAS AS EMPRESAS'){
+if(empSel){
     const chartWrap=document.createElement('div'); chartWrap.className='grid';
     chartWrap.innerHTML=renderChartBlock(empSel);
     container.appendChild(chartWrap);
